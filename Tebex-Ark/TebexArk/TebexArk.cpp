@@ -7,12 +7,15 @@
 #include <fstream>
 #include <filesystem>
 
+#include <Timer.h>
+
 #include "TebexInfo.h"
 #include "TebexSecret.h"
 #include "TebexForcecheck.h"
 #include "TebexOnlineCommands.h"
 #include "TebexPushCommands.hpp"
 #include "TebexBuyCommand.h"
+#include "TebexEvents.h"
 
 #ifdef TEBEX_ATLAS
 #pragma comment(lib, "lib/AtlasApi.lib")
@@ -23,6 +26,7 @@
 DECLARE_HOOK(AShooterGameMode_InitGame, void, AShooterGameMode*, FString*, FString*, FString*);
 DECLARE_HOOK(AShooterGameMode_HandleNewPlayer, bool, AShooterGameMode*, AShooterPlayerController*, UPrimalPlayerData*,
  AShooterCharacter*, bool);
+DECLARE_HOOK(AShooterGameMode_Logout, void, AShooterGameMode*, AController*);
 
 TebexArk* gPlugin;
 
@@ -191,13 +195,14 @@ void TebexArk::setWebstore(const json& json) {
 	webstoreInfo_.currency = FString(json["account"]["currency"]["iso_4217"].get<std::string>());
 	webstoreInfo_.currencySymbol = FString(json["account"]["currency"]["symbol"].get<std::string>());
 	webstoreInfo_.gameType = FString(json["account"]["game_type"].get<std::string>());
+	webstoreInfo_.logEvents = json["account"]["log_events"];
 
 	webstoreInfo_.serverName = FString(json["server"]["name"].get<std::string>());
 	webstoreInfo_.serverId = json["server"]["id"].get<int>();
 
 }
 
-WebstoreInfo TebexArk::getWebstore() const {
+const WebstoreInfo& TebexArk::getWebstore() const {
 	return webstoreInfo_;
 }
 
@@ -496,6 +501,12 @@ void Hook_AShooterGameMode_InitGame(AShooterGameMode* a_shooter_game_mode, FStri
 			TebexBuyChatCommand::Call(gPlugin);
 		}
 	});
+
+	API::Timer::Get().RecurringExecute([]()
+	{
+		if (gPlugin->getWebstore().logEvents)
+			TebexEvents::SendEvents(gPlugin);
+	}, 60, -1, false);
 }
 
 bool Hook_AShooterGameMode_HandleNewPlayer(AShooterGameMode* _this, AShooterPlayerController* new_player,
@@ -503,6 +514,10 @@ bool Hook_AShooterGameMode_HandleNewPlayer(AShooterGameMode* _this, AShooterPlay
                                            bool is_from_login) {
 	const bool res = AShooterGameMode_HandleNewPlayer_original(_this, new_player, player_data, player_character, is_from_login);
 
+	// Add player join event
+	if (gPlugin->getWebstore().logEvents)
+		TebexEvents::AddPlayerEvent(new_player, TebexEvents::EventType::PlayerJoin);
+	
 	const uint64 steamId = ArkApi::IApiUtils::GetSteamIdFromController(new_player);
 
 	PendingCommand* result = pendingCommands.FindByPredicate([steamId](const auto& data) {
@@ -530,6 +545,18 @@ bool Hook_AShooterGameMode_HandleNewPlayer(AShooterGameMode* _this, AShooterPlay
 	}
 
 	return res;
+}
+
+void Hook_AShooterGameMode_Logout(AShooterGameMode* _this, AController* exiting)
+{
+	// Add player leave event
+	if (gPlugin->getWebstore().logEvents)
+	{
+		TebexEvents::AddPlayerEvent(static_cast<AShooterPlayerController*>(exiting),
+			TebexEvents::EventType::PlayerLeave);
+	}
+	
+	AShooterGameMode_Logout_original(_this, exiting);
 }
 
 void Load() {
@@ -587,6 +614,8 @@ void Load() {
 	                           &AShooterGameMode_HandleNewPlayer_original);
 	ArkApi::GetHooks().SetHook("AShooterGameMode.InitGame", &Hook_AShooterGameMode_InitGame,
 	                           &AShooterGameMode_InitGame_original);
+	ArkApi::GetHooks().SetHook("AShooterGameMode.Logout", &Hook_AShooterGameMode_Logout,
+						       &AShooterGameMode_Logout_original);
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {

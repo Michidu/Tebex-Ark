@@ -35,7 +35,7 @@ public:
 	void logWarning(const FString& message) const;
 	void logError(const FString& message) const;
 	void setWebstore(const json& json);
-	WebstoreInfo getWebstore() const;
+	const WebstoreInfo& getWebstore() const;
 	Config getConfig() const;
 	json getJson() const;
 	FString GetText(const std::string& str, const std::string& default_message = "No message") const;

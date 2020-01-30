@@ -155,6 +155,7 @@
     <ClInclude Include="TebexArk.h" />
     <ClInclude Include="TebexBuyCommand.h" />
     <ClInclude Include="TebexDeleteCommands.h" />
+    <ClInclude Include="TebexEvents.h" />
     <ClInclude Include="TebexForcecheck.h" />
     <ClInclude Include="TebexInfo.h" />
     <ClInclude Include="TebexOfflineCommands.h" />

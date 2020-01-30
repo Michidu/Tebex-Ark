@@ -13,6 +13,7 @@ struct WebstoreInfo {
 	FString currency;
 	FString currencySymbol;
 	FString gameType;
+	bool logEvents;
 	FString serverName;
 	int serverId;
 };

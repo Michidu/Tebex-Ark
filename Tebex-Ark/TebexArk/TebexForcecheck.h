@@ -14,7 +14,7 @@ public:
 };
 
 inline void TebexForcecheck::Call(TebexArk* plugin) {
-	plugin->logWarning("TebexForcecheck");
+	//plugin->logWarning("TebexForcecheck");
 
 	const std::string url = (plugin->getConfig().baseUrl + "/queue").ToString();
 	std::vector<std::string> headers{
