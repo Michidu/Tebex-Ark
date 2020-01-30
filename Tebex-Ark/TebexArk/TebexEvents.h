@@ -99,8 +99,8 @@ inline void TebexEvents::SendEvents(TebexArk* plugin) {
 	if (payload.empty())
 		return;
 
-	plugin->logWarning("Sending events:");
-	plugin->logWarning(payload.c_str());
+	//plugin->logWarning("Sending events:");
+	//plugin->logWarning(payload.c_str());
 	
 	const bool result = API::Requests::Get().CreatePostRequest(url, [plugin](bool success, std::string response) {
 		if (!success) {
